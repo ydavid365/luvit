@@ -53,6 +53,7 @@ typedef struct tls_conn_t {
   SSL *ssl;
   int is_server;
   int error;
+  char error_buf[512];
 
   /* SNI Support */
   char *server_name;
@@ -66,6 +67,7 @@ static const int X509_NAME_FLAGS = ASN1_STRFLGS_ESC_CTRL
 
 #define TLS_CONNECTION_HANDLE "ltls_connection"
 
+#define SSL_DEBUG 1
 #ifdef SSL_DEBUG
 #define DBG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -146,6 +148,7 @@ newCONN(lua_State *L)
   tc->is_server = is_server;
   tc->server_name = NULL;
   tc->error = 0;
+  strcpy(tc->error_buf, "No error");
 
   if (tc->is_server) {
     if (!is_request_cert) {
@@ -258,11 +261,10 @@ tls_handle_bio_error_x(tls_conn_t *tc, BIO *bio, SSL *ssl, int rv, const char *f
     return 0;
 
   } else {
-    char ssl_error_buf[512];
     assert(rv == SSL_ERROR_SSL || rv == SSL_ERROR_SYSCALL);
     tc->error = rv;
-    ERR_error_string_n(rv, ssl_error_buf, sizeof(ssl_error_buf));
-    DBG("[%p] BIO: %s failed: (%d) %s\n", ssl, func, rv, ssl_error_buf);
+    ERR_error_string_n(rv, tc->error_buf, sizeof(tc->error_buf));
+    DBG("[%p] BIO: %s failed: (%d) %s\n", ssl, func, rv, tc->error_buf);
     return rv;
   }
 
@@ -418,8 +420,15 @@ tls_conn_shutdown(lua_State *L) {
 static int
 tls_conn_get_error(lua_State *L) {
   tls_conn_t *tc = getCONN(L, 1);
-  tc->error ? lua_pushnumber(L, tc->error) : lua_pushnil(L);
-  return 1;
+  if (tc->error) {
+    lua_pushstring(L, tc->error_buf);
+    lua_pushnumber(L, tc->error);
+    return 2;
+  }
+  else {
+    lua_pushnil(L);
+    return 1;
+  }
 }
 
 static int
