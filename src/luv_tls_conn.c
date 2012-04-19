@@ -67,7 +67,6 @@ static const int X509_NAME_FLAGS = ASN1_STRFLGS_ESC_CTRL
 
 #define TLS_CONNECTION_HANDLE "ltls_connection"
 
-#define SSL_DEBUG 1
 #ifdef SSL_DEBUG
 #define DBG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -232,6 +231,7 @@ tls_handle_ssl_error_x(tls_conn_t *tc, SSL *ssl, int rv, const char *func) {
     if ((bio = BIO_new(BIO_s_mem()))) {
       ERR_print_errors(bio);
       BIO_get_mem_ptr(bio, &mem);
+      strcpy(tc->error_buf, mem->data);
       DBG("[%p] SSL: error %s\n", ssl, mem->data);
       BIO_free(bio);
     }

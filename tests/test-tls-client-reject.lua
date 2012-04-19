@@ -5,6 +5,10 @@ local tls = require('tls')
 local options = {
   cert = fixture.certPem,
   key = fixture.certKey,
+  host = '127.0.0.1',
+}
+
+local client_options = {
   port = fixture.commonPort,
   host = '127.0.0.1',
   rejectUnauthorized = true,
@@ -22,11 +26,14 @@ server = tls.createServer(options, function(socket)
 end)
 
 server:on('clientError', function(err)
+  -- clientError shouldn't ever happen
+  p(err)
   assert(false)
 end)
 
 local unauthorized = function()
-  local socket = tls.connect(options, function()
+  local socket = tls.connect(client_options, {}, function()
+    p(socket)
     assert(socket.authorized == nil)
     socket:finish()
     rejectUnauthorized()
@@ -41,7 +48,7 @@ local unauthorized = function()
 end
 
 local rejectUnauthorized = function()
-  local socket = tls.connect(options, function()
+  local socket = tls.connect(client_options, function()
     assert(false)
   end)
 
