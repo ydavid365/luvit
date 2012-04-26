@@ -206,13 +206,13 @@ end
 function CryptoStream:destroySoon()
   dbg('destroySoon')
   if self.writable == true then
-    self:done()
+    self:finish()
   else
     self:destroy()
   end
 end
 
-function CryptoStream:done(d)
+function CryptoStream:finish(d)
   dbg('done')
   if self.pair._doneFlag then
     return
@@ -431,6 +431,11 @@ function CleartextStream:destroy()
   self._closing = true
 end
 
+function CleartextStream:finish()
+  self._closing = true
+  self.socket:finish()
+end
+
 function CleartextStream:address()
   return self.socket and self.socket:address()
 end
@@ -600,6 +605,7 @@ function SecurePair:err()
       err = Error:new('socket hang up')
       err.code = 'ECONNRESET'
     else
+      print("SecurePair error")
       err = Error:new(ssl_err_str)
       err.code = ssl_err
     end

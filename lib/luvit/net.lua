@@ -118,6 +118,10 @@ function Socket:_write(data, callback)
   return self._handle:writeQueueSize() == 0
 end
 
+function Socket:finish(data)
+  self._handle:shutdown()
+end
+
 function Socket:shutdown(callback)
   self._handle:shutdown(callback)
 end

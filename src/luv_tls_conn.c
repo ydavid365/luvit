@@ -261,10 +261,11 @@ tls_handle_bio_error_x(tls_conn_t *tc, BIO *bio, SSL *ssl, int rv, const char *f
     return 0;
 
   } else {
+    char ssl_error_buf[512];
     assert(rv == SSL_ERROR_SSL || rv == SSL_ERROR_SYSCALL);
     tc->error = rv;
-    ERR_error_string_n(rv, tc->error_buf, sizeof(tc->error_buf));
-    DBG("[%p] BIO: %s failed: (%d) %s\n", ssl, func, rv, tc->error_buf);
+    ERR_error_string_n(rv, ssl_error_buf, sizeof(ssl_error_buf));
+    DBG("[%p] BIO: %s failed: (%d) %s\n", ssl, func, rv, ssl_error_buf);
     return rv;
   }
 
