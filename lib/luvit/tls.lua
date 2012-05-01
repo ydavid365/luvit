@@ -822,10 +822,16 @@ function connect(...)
     callback = args[#args]
   end
 
-  local socket = options.socket or Socket:new()
+  local socket
+  if options.socket then
+    socket = options.socket
+  else
+    socket = Socket:new()
+    socket:connect(options.port, options.host)
+  end
+
   local sslcontext = createCredentials(options)
 
-  socket:connect(options.port, options.host)
 
   local servername = options.servername or options.host
   if not servername then
