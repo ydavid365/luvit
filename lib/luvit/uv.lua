@@ -354,7 +354,16 @@ function Process:initialize(command, args, options)
   args = args or {}
   options = options or {}
 
-  self.userdata = native.spawn(self.stdin, self.stdout, self.stderr, command, args, options)
+  local success, result = pcall(native.spawn, self.stdin, self.stdout, self.stderr, command, args, options)
+
+  if success then
+    self.userdata = result
+  else
+    self.stdin:close()
+    self.stderr:close()
+    self.stdout:close()
+    error(result)
+  end
 
   self.stdout:readStart()
   self.stderr:readStart()

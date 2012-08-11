@@ -4,7 +4,7 @@ local os = require('os')
 
 local environmentTestResult = false
 
-function test()
+function test_process_env()
   local options = {
     env = { TEST1 = 1 }
   }
@@ -22,7 +22,16 @@ function test()
   end)
 end
 
-test()
+function test_process_fail()
+  child = spawn('this_executable_will_never_exist_i_hope', {})
+  p(child)
+  child:on("exit", function(stuff)
+    p(stuff)
+  end)
+end
+
+test_process_env()
+test_process_fail()
 
 assert(process.pid ~= nil)
 
