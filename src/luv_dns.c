@@ -468,18 +468,24 @@ int luv_dns_getHostByAddr(lua_State* L)
   int length, family;
   const char* ip = luaL_checkstring(L, 1);
   luv_dns_ref_t* ref = luv_dns_store_callback(L, 2);
+  uv_err_t err;
 
-  if (uv_inet_pton(AF_INET, ip, &address_buffer) == 1) {
+  err = uv_inet_pton(AF_INET, ip, &address_buffer);
+  if (err.code == 0) {
     length = sizeof(struct in_addr);
     family = AF_INET;
-  } else if (uv_inet_pton(AF_INET6, ip, &address_buffer) == 1) {
-    length = sizeof(struct in6_addr);
-    family = AF_INET6;
-  } else {
-    luv_dns_get_callback(ref);
-    luv_push_ares_async_error(ref->L, ARES_EBADSTR, "getHostByAddr");
-    luv_dns_ref_cleanup(ref);
-    return 0;
+  }
+  else {
+    err = uv_inet_pton(AF_INET6, ip, &address_buffer);
+    if (err.code == 0) {
+      length = sizeof(struct in6_addr);
+      family = AF_INET6;
+    } else {
+      luv_dns_get_callback(ref);
+      luv_push_ares_async_error(ref->L, ARES_EBADSTR, "getHostByAddr");
+      luv_dns_ref_cleanup(ref);
+      return 0;
+    }
   }
 
   ares_gethostbyaddr(channel, address_buffer, length, family,
@@ -546,15 +552,20 @@ int luv_dns_getAddrInfo(lua_State* L)
 static int luv_dns__isIp(lua_State *L, const char *ip, int v4v6) {
   int family;
   char address_buffer[sizeof(struct in6_addr)];
+  uv_err_t err;
 
-  if (uv_inet_pton(AF_INET, ip, &address_buffer) == 1) {
+  err = uv_inet_pton(AF_INET, ip, &address_buffer);
+  if (err.code == 0) {
     family = AF_INET;
-  } else if (uv_inet_pton(AF_INET6, ip, &address_buffer) == 1) {
-    family = AF_INET6;
   } else {
-    /* failure */
-    lua_pushnumber(L, 0);
-    return 1;
+    err = uv_inet_pton(AF_INET6, ip, &address_buffer);
+    if (err.code == 0) {
+      family = AF_INET6;
+    } else {
+      /* failure */
+      lua_pushnumber(L, 0);
+      return 1;
+    }
   }
 
   if (v4v6 == 0) {
