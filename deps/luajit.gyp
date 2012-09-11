@@ -18,7 +18,7 @@
     'target_defaults': {
       'defines': [
         'LUAJIT_ENABLE_LUA52COMPAT',
-      'LUA_USE_APICHECK',
+        'LUA_USE_APICHECK',
       ],
       'conditions': [
         ['target_arch=="x64"', {
@@ -63,6 +63,11 @@
         'libluajit',
         'luajit-datafiles',
       ],
+      'direct_dependent_settings': {
+        'include_dirs': [
+          'luajit/src',
+        ]
+      },
       'conditions': [
         ['OS == "linux"', { 'libraries': ['-ldl'] }, ],
       ],
