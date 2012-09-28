@@ -78,10 +78,6 @@ int luv_spawn(lua_State* L) {
   options.stdio[2].flags = UV_IGNORE;
   */
 
-  options.stdio[0].flags = UV_CREATE_PIPE | UV_WRITABLE_PIPE;
-  options.stdio[1].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;
-  options.stdio[2].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;
-
   /*
   TODO: Handle creating pipes
   options.stdio[0].flags = UV_INHERIT_STREAM;
@@ -89,9 +85,60 @@ int luv_spawn(lua_State* L) {
   options.stdio[2].flags = UV_INHERIT_STREAM;
   */
 
+  options.stdio[0].flags = UV_CREATE_PIPE | UV_WRITABLE_PIPE;
+  options.stdio[1].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;
+  options.stdio[2].flags = UV_CREATE_PIPE | UV_READABLE_PIPE;
+
   options.stdio[0].data.stream = stdin_stream;
   options.stdio[1].data.stream = stdout_stream;
   options.stdio[2].data.stream = stderr_stream;
+
+  lua_getfield(L, 6, "uid");
+  if (lua_isnumber(L, -1)) {
+    int32_t uid = lua_tointeger(L, -1);
+    options.flags |= UV_PROCESS_SETUID;
+    options.uid = (uv_uid_t) uid;
+  }
+  else if (!lua_isnil(L, -1)) {
+    return luaL_error(L, "options.uid: must be a number.");
+  }
+  lua_pop(L, 1);
+
+  lua_getfield(L, 6, "gid");
+  if (lua_isnumber(L, -1)) {
+    int32_t gid = lua_tointeger(L, -1);
+    options.flags |= UV_PROCESS_SETGID;
+    options.gid = (uv_gid_t) gid;
+  }
+  else if (!lua_isnil(L, -1)) {
+    return luaL_error(L, "options.git: must be a number.");
+  }
+  lua_pop(L, 1);
+
+
+  lua_getfield(L, 6, "file");
+  if (lua_isstring(L, -1)) {
+    const char *file = lua_tostring(L, -1);
+    /* No need for a stdup, because file is on the options table, 
+     * as long as that isn't GC, this is safe.*/
+    options.file = file;
+  }
+  else if (!lua_isnil(L, -1)) {
+    return luaL_error(L, "options.file: must be a string.");
+  }
+  lua_pop(L, 1);
+
+  lua_getfield(L, 6, "windowsVerbatimArguments");
+  if (!lua_isnil(L, -1)) {
+      options.flags |= UV_PROCESS_WINDOWS_VERBATIM_ARGUMENTS;
+  }
+  lua_pop(L, 1);
+
+  lua_getfield(L, 6, "detached");
+  if (!lua_isnil(L, -1)) {
+      options.flags |= UV_PROCESS_DETACHED;
+  }
+  lua_pop(L, 1);
 
   /* Parse the args array */
   argc = lua_objlen(L, 5) + 1;
@@ -124,6 +171,7 @@ int luv_spawn(lua_State* L) {
   }
   lua_pop(L, 1);
 
+
   options.exit_cb = luv_process_on_exit;
   options.file = command;
   options.args = args;
@@ -131,12 +179,19 @@ int luv_spawn(lua_State* L) {
   options.env = env ? env : luv_os_environ();
   options.cwd = cwd;
 
+
   /* Create the userdata */
   handle = luv_create_process(L);
   luv_handle_ref(L, handle->data, -1);
+
   r = uv_spawn(luv_get_loop(L), handle, options);
+
   free(args);
-  if (env) free(env);
+
+  if (env) {
+    free(env);
+  }
+
   if (r) {
     uv_err_t err = uv_last_error(luv_get_loop(L));
     return luaL_error(L, "spawn: %s", uv_strerror(err));
