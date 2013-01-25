@@ -317,6 +317,10 @@ function CryptoStream:_pull()
   dbg('CryptoStream:_pull')
 
   while #self._pending > 0 do
+    if not self.pair.ssl then
+      return
+    end
+
     local tmp = table.remove(self._pending)
     local callback = table.remove(self._pendingCallbacks)
 
@@ -446,6 +450,10 @@ function CleartextStream:_pusher()
   return self.pair.ssl:clearOut()
 end
 
+function CleartextStream:shutdown(cb)
+  self:destroy()
+  if cb then cb() end
+end
 function CleartextStream:destroy()
   if self.socket and self._closing ~= true then
     self.socket:destroy()
